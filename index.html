@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRID One · Leaderboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #07090f;
+    --panel: #0d111c;
+    --border: #1a2540;
+    --accent: #00c8ff;
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+    --green: #7fff6e;
+    --dim: #3a4a6a;
+    --text: #c8d8f0;
+    --textdim: #5a6a8a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,200,255,0.018) 40px),
+      repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,200,255,0.018) 40px);
+    pointer-events: none;
+  }
+
+  .wrap { max-width: 480px; margin: 0 auto; position: relative; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 32px; }
+  .header .tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 3px;
+  }
+  .header h1 span { color: var(--accent); }
+
+  /* Game name */
+  .game-name {
+    text-align: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--textdim);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .round-badge {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .round-badge span {
+    display: inline-block;
+    background: rgba(0,200,255,0.1);
+    border: 1px solid rgba(0,200,255,0.3);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  /* Board */
+  .board { display: flex; flex-direction: column; gap: 8px; }
+
+  .entry {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+
+  .entry.rank-1 { border-color: var(--gold); }
+  .entry.rank-2 { border-color: var(--silver); }
+  .entry.rank-3 { border-color: var(--bronze); }
+
+  .entry::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+  }
+  .entry.rank-1::before { background: var(--gold); }
+  .entry.rank-2::before { background: var(--silver); }
+  .entry.rank-3::before { background: var(--bronze); }
+
+  .rank-num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 900;
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .entry.rank-1 .rank-num { color: var(--gold); }
+  .entry.rank-2 .rank-num { color: var(--silver); }
+  .entry.rank-3 .rank-num { color: var(--bronze); }
+  .entry:not(.rank-1):not(.rank-2):not(.rank-3) .rank-num { color: var(--textdim); font-size: 14px; }
+
+  .entry-info { flex: 1; }
+  .entry-name {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+  }
+
+  .entry-score {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .entry.rank-1 .entry-score { color: var(--gold); }
+
+  /* No game */
+  .no-game {
+    text-align: center;
+    padding: 48px 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--textdim);
+    letter-spacing: 2px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 32px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+
+  /* Pulse dot */
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+    justify-content: center;
+    width: 100%;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.4; transform: scale(0.7); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="tag">Public Standings</div>
+    <h1>GRID <span>One</span></h1>
+  </div>
+
+  <div class="live"><span class="dot"></span> LIVE</div>
+
+  <div id="game-name" class="game-name">Loading...</div>
+  <div id="round-badge" class="round-badge"></div>
+  <div id="board" class="board"></div>
+  <div class="footer">Updates automatically · GRID One Program</div>
+</div>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────────
+  // Replace with your Google Sheet's published CSV URLs
+  // File > Share > Publish to web > Sheet: Games → CSV
+  // File > Share > Publish to web > Sheet: Scores → CSV
+  const GAMES_CSV  = "YOUR_GAMES_SHEET_PUBLISHED_CSV_URL";
+  const SCORES_CSV = "YOUR_SCORES_SHEET_PUBLISHED_CSV_URL";
+
+  const MEDALS = ["🥇", "🥈", "🥉"];
+
+  // ── FETCH & PARSE CSV ────────────────────────────────────────
+  async function fetchCSV(url) {
+    const r = await fetch(url + "&cachebust=" + Date.now());
+    const text = await r.text();
+    const lines = text.trim().split("\n").map(l => l.split(",").map(c => c.trim().replace(/^"|"$/g, "")));
+    const headers = lines[0];
+    return lines.slice(1).map(row => {
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = row[i] || "");
+      return obj;
+    });
+  }
+
+  // ── BUILD LEADERBOARD ────────────────────────────────────────
+  async function render() {
+    try {
+      const [games, scores] = await Promise.all([fetchCSV(GAMES_CSV), fetchCSV(SCORES_CSV)]);
+
+      // Find active game
+      const active = games.filter(g => g.status === "active").pop();
+
+      const gameNameEl  = document.getElementById("game-name");
+      const roundBadge  = document.getElementById("round-badge");
+      const boardEl     = document.getElementById("board");
+
+      if (!active) {
+        gameNameEl.textContent = "NO ACTIVE GAME";
+        boardEl.innerHTML = '<div class="no-game">⏸ Waiting for GM to start a game.</div>';
+        roundBadge.innerHTML = "";
+        return;
+      }
+
+      gameNameEl.textContent = active.game_name || active[Object.keys(active)[0]];
+      roundBadge.innerHTML   = '<span>Round ' + active.current_round + '</span>';
+
+      // Filter scores for this game
+      const gameName = active.game_name || active[Object.keys(active)[0]];
+      const relevant = scores.filter(s => s.game === gameName);
+
+      // Sum scores per player
+      const totals = {};
+      relevant.forEach(s => {
+        const name  = s.player_name;
+        const score = parseFloat(s.score) || 0;
+        totals[name] = (totals[name] || 0) + score;
+      });
+
+      const sorted = Object.entries(totals)
+        .map(([name, total]) => ({ name, total }))
+        .sort((a, b) => b.total - a.total);
+
+      if (sorted.length === 0) {
+        boardEl.innerHTML = '<div class="no-game">📊 No scores posted yet.</div>';
+        return;
+      }
+
+      boardEl.innerHTML = sorted.map((e, i) => {
+        const rankClass = i < 3 ? " rank-" + (i + 1) : "";
+        const icon = MEDALS[i] || (i + 1);
+        return `
+          <div class="entry${rankClass}">
+            <div class="rank-num">${icon}</div>
+            <div class="entry-info">
+              <div class="entry-name">${e.name}</div>
+            </div>
+            <div class="entry-score">${e.total} pts</div>
+          </div>
+        `;
+      }).join("");
+
+    } catch (err) {
+      document.getElementById("board").innerHTML =
+        '<div class="no-game">⚠️ Could not load data.</div>';
+    }
+  }
+
+  // Auto-refresh every 30 seconds
+  render();
+  setInterval(render, 30000);
+</script>
+</body>
+</html>
