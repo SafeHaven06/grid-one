@@ -19,6 +19,7 @@
     --dim: #3a4a6a;
     --text: #c8d8f0;
     --textdim: #5a6a8a;
+    --accent-red: #ff7b72;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -61,6 +62,58 @@
     letter-spacing: 3px;
   }
   .header h1 span { color: var(--accent); }
+
+  /* 🆕 Contraband Faction Grid Styling */
+  .contraband-header {
+    text-align: center;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .faction-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .faction-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    position: relative;
+  }
+  .faction-card.c1 { border-top: 3px solid var(--accent); }
+  .faction-card.c2 { border-top: 3px solid var(--accent-red); }
+  
+  .faction-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--textdim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .faction-bank {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .faction-card.c1 .faction-bank { color: var(--accent); }
+  .faction-card.c2 .faction-bank { color: var(--accent-red); }
+  
+  .faction-vault {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--textdim);
+  }
 
   /* Game name */
   .game-name {
@@ -202,75 +255,111 @@
 
   <div class="live"><span class="dot"></span> LIVE</div>
 
+  <div class="contraband-header">📦 Contraband War Room</div>
+  <div class="faction-grid">
+    <div class="faction-card c1">
+      <div class="faction-title">Class 1 Bank</div>
+      <div class="faction-bank" id="c1-bank">0 PP</div>
+      <div class="faction-vault">Vault: <span id="c1-vault">10,000</span></div>
+    </div>
+    <div class="faction-card c2">
+      <div class="faction-title">Class 2 Bank</div>
+      <div class="faction-bank" id="c2-bank">0 PP</div>
+      <div class="faction-vault">Vault: <span id="c2-vault">10,000</span></div>
+    </div>
+  </div>
+
+  <div class="game-name" style="text-align: center; font-family: 'Orbitron', sans-serif; font-size: 14px; color: #fff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 2px;">🏆 Special Exam Standings</div>
   <div id="game-name" class="game-name">Loading...</div>
   <div id="round-badge" class="round-badge"></div>
   <div id="board" class="board"></div>
+  
   <div class="footer">Updates automatically · GRID One Program</div>
 </div>
 
 <script>
   // ── CONFIG ──────────────────────────────────────────────────
-  // Replace with your Google Sheet's published CSV URLs
-  // File > Share > Publish to web > Sheet: Games → CSV
-  // File > Share > Publish to web > Sheet: Scores → CSV
-  const GAMES_CSV  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTdq1TwD-w-9A6QM_mR8niukr842x6ZmqqQrbUxH8pYFRhtj48fUlsKw771inI2OvGqbn-6ASyFMlDa/pub?gid=1493070854&single=true&output=csv";
-  const SCORES_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTdq1TwD-w-9A6QM_mR8niukr842x6ZmqqQrbUxH8pYFRhtj48fUlsKw771inI2OvGqbn-6ASyFMlDa/pub?gid=368183261&single=true&output=csv";
+  // Use your primary, active configuration Spreadsheet ID
+  const SHEET_ID = "1Z8q3Iz2-fsgeWB1Okwv1mZh99_f0YHmhjDj_PFHYkps";
 
   const MEDALS = ["🥇", "🥈", "🥉"];
 
-  // ── FETCH & PARSE CSV ────────────────────────────────────────
-  async function fetchCSV(url) {
-    const r = await fetch(url + "&cachebust=" + Date.now());
+  // ── FETCH & PARSE GOOGLE SHEETS VIA GVIZ API ─────────────────
+  async function fetchSheetData(tabName) {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${tabName}&cachebust=${Date.now()}`;
+    const r = await fetch(url);
     const text = await r.text();
-    const lines = text.trim().split("\n").map(l => l.split(",").map(c => c.trim().replace(/^"|"$/g, "")));
-    const headers = lines[0];
-    return lines.slice(1).map(row => {
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = row[i] || "");
-      return obj;
-    });
+    // Strip out the Google secure JSON API wrapper structure safely
+    const data = JSON.parse(text.substr(47).slice(0, -2));
+    return data.table.rows;
   }
 
-  // ── BUILD LEADERBOARD ────────────────────────────────────────
+  // ── RE-ENGINEERED RENDER LOOP ────────────────────────────────
   async function render() {
     try {
-      const [games, scores] = await Promise.all([fetchCSV(GAMES_CSV), fetchCSV(SCORES_CSV)]);
+      // Parallel pull parsing for maximum load efficiency
+      const [cbRows, gamesRows, scoresRows] = await Promise.all([
+        fetchSheetData("Contraband"),
+        fetchSheetData("Games"),
+        fetchSheetData("Scores")
+      ]);
 
-      // Find active game
-      const active = games.filter(g => g.status === "active").pop();
+      // 1. UPDATE CONTRABAND DATABASES
+      // Row 2 -> Index 0 | Row 3 -> Index 1 in Gviz structures
+      const c1Vault = cbRows[0]?.c[0]?.v ?? 10000;
+      const c1Bank  = cbRows[0]?.c[1]?.v ?? 0;
+      const c2Vault = cbRows[1]?.c[0]?.v ?? 10000;
+      const c2Bank  = cbRows[1]?.c[1]?.v ?? 0;
+
+      document.getElementById('c1-bank').textContent = Number(c1Bank).toLocaleString() + " PP";
+      document.getElementById('c1-vault').textContent = Number(c1Vault).toLocaleString();
+      document.getElementById('c2-bank').textContent = Number(c2Bank).toLocaleString() + " PP";
+      document.getElementById('c2-vault').textContent = Number(c2Vault).toLocaleString();
+
+      // 2. PARSE ACTIVE GAME COMPONENT
+      // Scan Games matrix backwards to grab the last activated project row
+      let activeGame = null;
+      for (let i = gamesRows.length - 1; i >= 0; i--) {
+        if (gamesRows[i]?.c[1]?.v === "active") {
+          activeGame = {
+            name: gamesRows[i]?.c[0]?.v,
+            round: gamesRows[i]?.c[2]?.v ?? 1
+          };
+          break;
+        }
+      }
 
       const gameNameEl  = document.getElementById("game-name");
       const roundBadge  = document.getElementById("round-badge");
       const boardEl     = document.getElementById("board");
 
-      if (!active) {
+      if (!activeGame) {
         gameNameEl.textContent = "NO ACTIVE GAME";
         boardEl.innerHTML = '<div class="no-game">⏸ Waiting for GM to start a game.</div>';
         roundBadge.innerHTML = "";
         return;
       }
 
-      gameNameEl.textContent = active.game_name || active[Object.keys(active)[0]];
-      roundBadge.innerHTML   = '<span>Round ' + active.current_round + '</span>';
+      gameNameEl.textContent = activeGame.name;
+      roundBadge.innerHTML   = '<span>Round ' + activeGame.round + '</span>';
 
-      // Filter scores for this game
-      const gameName = active.game_name || active[Object.keys(active)[0]];
-      const relevant = scores.filter(s => s.game === gameName);
-
-      // Sum scores per player
+      // 3. COMPILE INDIVIDUAL POINTS LEDGER
       const totals = {};
-      relevant.forEach(s => {
-        const name  = s.player_name;
-        const score = parseFloat(s.score) || 0;
+      for (let i = 1; i < scoresRows.length; i++) {
+        const row = scoresRows[i]?.c;
+        if (!row || !row[2] || row[0]?.v !== activeGame.name) continue;
+        
+        const name = row[2].v;
+        const score = parseFloat(row[3]?.v) || 0;
         totals[name] = (totals[name] || 0) + score;
-      });
+      }
 
       const sorted = Object.entries(totals)
         .map(([name, total]) => ({ name, total }))
         .sort((a, b) => b.total - a.total);
 
       if (sorted.length === 0) {
-        boardEl.innerHTML = '<div class="no-game">📊 No scores posted yet.</div>';
+        boardEl.innerHTML = '<div class="no-game">📊 No standings posted yet.</div>';
         return;
       }
 
@@ -289,12 +378,13 @@
       }).join("");
 
     } catch (err) {
+      console.error(err);
       document.getElementById("board").innerHTML =
         '<div class="no-game">⚠️ Could not load data.</div>';
     }
   }
 
-  // Auto-refresh every 30 seconds
+  // Auto-refresh engine loop configured to tick every 30 seconds
   render();
   setInterval(render, 30000);
 </script>
